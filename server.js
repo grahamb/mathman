@@ -20,7 +20,13 @@ class Server  {
     }
     let uri = url.parse(req.url, true);
     let type = uri.pathname.replace(/^\/+|\/+$/g, "");
-    if (type !== 'svg' && type !== 'mml') {
+    if (type === "_health") {
+      // this uses `sendError` for convenience;
+      // this is not really an error
+      this.sendError(res, 200, "OK");
+      return;
+    }
+    if (type !== "svg" && type !== "mml") {
       this.sendError(res, 404, "Not Found");
       return;
     }
