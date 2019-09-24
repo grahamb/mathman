@@ -4,6 +4,7 @@ let should = require('chai').should();
 let sinon = require('sinon');
 let mj = require("mathjax-node/lib/main.js");
 let typeset = require('../typeset');
+const { JSDOM } = require('jsdom');
 
 describe('typeset', function() {
   let ts;
@@ -20,8 +21,8 @@ describe('typeset', function() {
   });
 
   afterEach(function() {
-    mj.start.reset();
-    mj.typeset.reset();
+    mj.start.resetHistory();
+    mj.typeset.resetHistory();
   });
 
   it('should call mj.typeset with the correct parameters', function(done) {
@@ -89,4 +90,46 @@ describe('typeset', function() {
       done();
     });
   });
+
+  it('should use LaTeX \color commands', function (done) {
+    const sampleTex = "\\color\{Red\}hi";
+    const sampleLaTeXOutput = "transform=\"translate";
+    typeset(sampleTex, function(err, data) {
+      try {
+        data.should.have.property('svg').which.is.a('string').and.contains(sampleLaTeXOutput)
+      } catch (err) {
+        return done(err);
+      }
+      done();
+    });
+  })
+
+  it('should not fail with color command at the end', function(done) {
+    const sampleTex = "hi\\color\{Red\}"
+    const sampleLaTeXOutput = "transform=\"translate";
+    typeset(sampleTex, function(err, data) {
+      try {
+        data.should.have.property('svg').which.is.a('string').and.contains(sampleLaTeXOutput)
+      } catch (err) {
+        return done(err);
+      }
+      done();
+    });
+  });
+
+  it('should have a fill for text nodes of unrecognized characters', done => {
+    const sampleTex = '£ = a + b';
+    typeset(sampleTex, function(err, data) {
+      const dom = new JSDOM(data.svg);
+      try {
+        for (let elem of dom.window.document.getElementsByTagName('text')) {
+          elem.hasAttribute('fill').should.equal(true);
+          elem.getAttribute('fill').should.equal('currentColor');
+        }
+      } catch (err) {
+        return done(err);
+      }
+      done();
+    });
+  })
 });

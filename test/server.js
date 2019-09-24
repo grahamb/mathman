@@ -19,7 +19,7 @@ describe('server', function () {
     });
 
     afterEach(function () {
-      redis.createClient.reset();
+      redis.createClient.resetHistory();
     });
 
     it('should not use redis when host and port not passed', function () {
@@ -60,8 +60,8 @@ describe('server', function () {
     });
 
     afterEach(function () {
-      res.writeHead.reset();
-      res.end.reset();
+      res.writeHead.resetHistory();
+      res.end.resetHistory();
     });
 
     it('should call writeHead properly', function () {
@@ -97,8 +97,8 @@ describe('server', function () {
     });
 
     afterEach(function () {
-      res.writeHead.reset();
-      res.end.reset();
+      res.writeHead.resetHistory();
+      res.end.resetHistory();
     });
 
     it('should call writeHead properly', function () {
@@ -152,8 +152,8 @@ describe('server', function () {
     });
 
     afterEach(function () {
-      res.writeHead.reset();
-      res.end.reset();
+      res.writeHead.resetHistory();
+      res.end.resetHistory();
     });
 
     it('should send SVG content-type header', function () {
@@ -176,13 +176,23 @@ describe('server', function () {
       args[1].should.have.a.property('content-length', body.length);
     });
 
-        it('should call end properly', function () {
+    it('should call end properly', function () {
       server.sendResponse(res, 'svg', body);
       res.end.calledOnce.should.be.true;
       let args = res.end.lastCall.args;
       args.should.have.lengthOf(1);
       args[0].should.equal(body);
     });
+
+    it('should account for unicode character sizes in content-length', function () {
+      body = 'i look down in my red \uD83D\uDCA9';
+      const expectedHeaders = {
+        'Content-Type': 'image/svg+xml',
+        'content-length': 26
+      }
+      server.sendResponse(res, 'svg', body);
+      res.writeHead.calledWith(200, expectedHeaders).should.be.true;
+    })
   });
 
   describe('#sendTypesetResponse', function () {
@@ -242,7 +252,7 @@ describe('server', function () {
       sendResponseArgs[2].should.equal(typesetData[type]);
     });
 
-        it('should cache response on typeset success', function () {
+    it('should cache response on typeset success', function () {
       server.ts.callsArgWith(1, null, typesetData);
       server.useRedis = true;
       server.sendTypesetResponse(res, type, tex);
@@ -288,9 +298,9 @@ describe('server', function () {
     });
 
     it('defers to sendTypesetResponse on redis error', function () {
-    server.useRedis = true;
-    let err = "I'm not a monster Tom--well technically I am.";
-    server.redisCli.get.callsArgWith(1, err);
+      server.useRedis = true;
+      let err = "I'm not a monster Tom--well technically I am.";
+      server.redisCli.get.callsArgWith(1, err);
       server.sendCachedResponse(res, type, tex);
       server.redisCli.get.calledOnce.should.be.true;
       let getArgs = server.redisCli.get.lastCall.args;
@@ -306,9 +316,9 @@ describe('server', function () {
     });
 
     it('defers to sendTypesetResponse on empty redis reply', function () {
-    server.useRedis = true;
-    let reply = "";
-    server.redisCli.get.callsArgWith(1, null, reply);
+      server.useRedis = true;
+      let reply = "";
+      server.redisCli.get.callsArgWith(1, null, reply);
       server.sendCachedResponse(res, type, tex);
       server.redisCli.get.calledOnce.should.be.true;
       let getArgs = server.redisCli.get.lastCall.args;
@@ -324,13 +334,13 @@ describe('server', function () {
     });
 
     it('defers to sendResponse on cache hit', function () {
-    server.useRedis = true;
-    let reply = "because it's loud with the shop vac on.";
-    server.redisCli.get.callsArgWith(1, null, reply);
-    server.sendCachedResponse(res, type, tex);
-    server.redisCli.get.calledOnce.should.be.true;
-    let getArgs = server.redisCli.get.lastCall.args;
-    getArgs.should.have.lengthOf(2);
+      server.useRedis = true;
+      let reply = "because it's loud with the shop vac on.";
+      server.redisCli.get.callsArgWith(1, null, reply);
+      server.sendCachedResponse(res, type, tex);
+      server.redisCli.get.calledOnce.should.be.true;
+      let getArgs = server.redisCli.get.lastCall.args;
+      getArgs.should.have.lengthOf(2);
       getArgs[0].should.equal(type + ':' + tex);
       server.sendTypesetResponse.called.should.be.false;
       server.sendResponse.calledOnce.should.be.true;
@@ -370,7 +380,7 @@ describe('server', function () {
         args[0].should.equal(res);
         args[1].should.equal(405);
         args[2].should.equal("Method not allowed.");
-        server.sendError.reset();
+        server.sendError.resetHistory();
       }
       let req = {
         url: `http://localhost/svg/?tex=${escapedTex}`,
@@ -391,7 +401,7 @@ describe('server', function () {
         args[0].should.equal(res);
         args[1].should.equal(404);
         args[2].should.equal("Not Found");
-        server.sendError.reset();
+        server.sendError.resetHistory();
       }
       let validTypes = ['svg', 'mml'];
       for (let type of validTypes) {
@@ -403,7 +413,7 @@ describe('server', function () {
       server.handleRequest(req, res);
       console.dir(server.sendError.args);
       server.sendError.calledOnce.should.be.false;
-      server.sendError.reset();
+      server.sendError.resetHistory();
       }
     });
 
